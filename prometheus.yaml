@@ -1,6 +1,6 @@
 ---
-- hosts: prometheus
-  remote_user: seymourd
+- hosts: all
+  remote_user: dannyseeless
   become: true
   tasks:
   - name: Install Docker repository
@@ -23,16 +23,27 @@
       state: latest
   - name: flush handlers to get Docker restarted
     meta: flush_handlers
+  - name: Copy prometheus config
+    copy:
+      src: config/
+      dest: /var/lib/docker/volumes/prometheus/_data/
   - name: Spin up the prometheus container
     docker_container:
       name: prometheus
-      image: quay.io/prometheus/prometheus
+      image: quay.io/prometheus/prometheus:v2.2.1
       state: started
-      command: --config.file=/prometheus-data/prometheus.yml --storage.tsdb.path=/prometheus-data --web.console.libraries=/usr/share/prometheus/console_libraries --web.console.templates=/usr/share/prometheus/consoles
+      command: --config.file=/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --web.console.libraries=/usr/share/prometheus/console_libraries --web.console.templates=/usr/share/prometheus/consoles
       published_ports:
         - 9090:9090
       volumes:
-        - "prometheus:/prometheus-data"
+        - "prometheus:/prometheus"
+  - name: Spin up prometheus node exporter on prometheus host
+    docker_container:
+      name: node-exporter
+      image: quay.io/prometheus/node-exporter:v0.15.2
+      pid_mode: host
+      network_mode: host
+      state: started
 
   handlers:
     - name: restart docker
