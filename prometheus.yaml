@@ -1,0 +1,39 @@
+---
+- hosts: prometheus
+  remote_user: seymourd
+  become: true
+  tasks:
+  - name: Install Docker repository
+    yum_repository: 
+      name: Docker-CE-Stable
+      description: Docker CE Stable - $basearch
+      baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+      enabled: yes 
+      gpgcheck: yes 
+      gpgkey: https://download.docker.com/linux/centos/gpg 
+  - name: Install Docker
+    yum:
+      name: docker-ce
+      state: latest
+    notify:
+      - restart docker
+  - name: Install docker-py module for docker_container ansible module
+    yum: 
+      name: python-docker-py
+      state: latest
+  - name: flush handlers to get Docker restarted
+    meta: flush_handlers
+  - name: Spin up the prometheus container
+    docker_container:
+      name: prometheus
+      image: quay.io/prometheus/prometheus
+      state: started
+      command: --config.file=/prometheus-data/prometheus.yml --storage.tsdb.path=/prometheus-data --web.console.libraries=/usr/share/prometheus/console_libraries --web.console.templates=/usr/share/prometheus/consoles
+      published_ports:
+        - 9090:9090
+      volumes:
+        - "prometheus:/prometheus-data"
+
+  handlers:
+    - name: restart docker
+      service: name=docker state=restarted enabled=yes
