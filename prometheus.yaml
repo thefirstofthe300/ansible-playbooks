@@ -3,6 +3,7 @@
   remote_user: dannyseeless
   become: true
   tasks:
+
   - name: Install Docker repository
     yum_repository: 
       name: Docker-CE-Stable
@@ -11,28 +12,34 @@
       enabled: yes 
       gpgcheck: yes 
       gpgkey: https://download.docker.com/linux/centos/gpg 
+
   - name: Install Docker
     yum:
       name: docker-ce
       state: latest
     notify:
       - restart docker
+
   - name: Install docker-py module for docker_container ansible module
     yum: 
       name: python-docker-py
       state: latest
+
   - name: flush handlers to get Docker restarted
     meta: flush_handlers
+
   - name: Copy prometheus config
     copy:
       src: config/prometheus/
       dest: /var/lib/docker/volumes/prometheus/_data/
     notify: restart prometheus
+
   - name: Copy alertmanager config
     copy:
       src: config/alertmanager/
       dest: /var/lib/docker/volumes/alertmanager/_data/
     notify: restart alertmanager
+
   - name: Spin up the prometheus container
     docker_container:
       name: prometheus
@@ -44,6 +51,7 @@
         - 9090:9090
       volumes:
         - "prometheus:/prometheus"
+
   - name: Spin up prometheus node exporter on prometheus host
     docker_container:
       name: node-exporter
@@ -51,6 +59,7 @@
       pid_mode: host
       network_mode: host
       state: started
+
   - name: Spin up alertmanagers on prometheus hosts
     docker_container:
       name: alertmanager
